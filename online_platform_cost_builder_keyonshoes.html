@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Online Platform Cost Builder – keyonshoes.lk</title>
+  <style>
+    :root{--bg:#0e0f12;--card:#111522;--muted:#9aa3b2;--text:#e7ecf3;--accent:#69d2ff;--line:#1e2540;--good:#41d392;--bad:#ff6b6b}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Inter,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    .wrap{max-width:1180px;margin:34px auto;padding:0 16px}
+    h1{font-size:28px;margin:0 0 6px}
+    p.sub{color:var(--muted);margin:0 0 18px}
+    h2{font-size:18px;margin:18px 0 8px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+    label{color:var(--muted);font-size:12px}
+    input[type="text"],input[type="number"],select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#0a0f1d;color:var(--text)}
+    input[type="number"]{text-align:right}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
+    .col-2{grid-column:span 2}.col-3{grid-column:span 3}.col-4{grid-column:span 4}.col-6{grid-column:span 6}.col-12{grid-column:span 12}
+    .row{display:grid;grid-template-columns:26px 1.6fr .8fr .8fr 1fr 1fr;gap:10px;align-items:center;background:#0e1428;border:1px solid var(--line);border-radius:12px;margin:8px 0;padding:10px}
+    .row input[type="checkbox"]{width:18px;height:18px}
+    .row .desc{font-weight:600}
+    .row .muted{color:var(--muted);font-size:12px}
+    .pill{background:#0d1225;border:1px solid var(--line);padding:10px 14px;border-radius:999px;font-weight:700}
+    .totals{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end}
+    .hr{height:1px;background:var(--line);margin:14px 0}
+    .btn{background:#0f162a;border:1px solid var(--line);color:var(--text);padding:10px 14px;border-radius:10px;cursor:pointer}
+    .right{float:right}
+    .note{color:var(--muted);font-size:12px}
+    a{color:#8fd1ff;text-decoration:underline}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Cost Builder – Online Shoes Platform</h1>
+    <p class="sub">Company: <strong>HS TRADING LANKA (PVT) LTD</strong> • Domain: <strong>keyonshoes.lk</strong></p>
+
+    <div class="card">
+      <div class="grid">
+        <div class="col-2">
+          <label>Display currency</label>
+          <select id="currency">
+            <option value="USD">USD</option>
+            <option value="LKR" selected>LKR</option>
+          </select>
+        </div>
+        <div class="col-3">
+          <label>USD → LKR exchange</label>
+          <input id="fx" type="number" step="0.01" value="300" />
+        </div>
+        <div class="col-3">
+          <label>VAT / Tax Rate (%)</label>
+          <input id="taxRate" type="number" step="0.01" value="0" />
+        </div>
+        <div class="col-2">
+          <label>Avg Order Value (LKR)</label>
+          <input id="aov" type="number" step="0.01" value="3000" />
+        </div>
+        <div class="col-2">
+          <label>Orders / month</label>
+          <input id="orders" type="number" step="1" value="120" />
+        </div>
+      </div>
+      <p class="note">We’re not using GMV. Variable costs are computed from <strong>orders × fees</strong> instead. All totals show in your selected currency and also the LKR equivalent.</p>
+    </div>
+
+    <h2>One‑time / Setup Costs</h2>
+    <div class="card" id="oneTimeSection"></div>
+
+    <h2>Monthly Recurring Costs (fixed)</h2>
+    <div class="card" id="monthlySection"></div>
+
+    <h2>Variable / Per‑Order Fees</h2>
+    <div class="card" id="variableSection"></div>
+
+    <div class="card">
+      <div class="totals">
+        <div class="pill">One‑time Subtotal: <span id="otSubtotalDisp">0.00</span> <span class="note" id="otLkr"></span></div>
+        <div class="pill">Monthly Fixed: <span id="mSubtotalDisp">0.00</span> <span class="note" id="mLkr"></span></div>
+        <div class="pill">Monthly Variable: <span id="mvSubtotalDisp">0.00</span> <span class="note" id="mvLkr"></span></div>
+        <div class="pill">All‑in Monthly: <span id="mAllDisp">0.00</span> <span class="note" id="mAllLkr"></span></div>
+        <div class="pill">Annualized: <span id="annualDisp">0.00</span> <span class="note" id="annualLkr"></span></div>
+      </div>
+      <div class="hr"></div>
+      <button class="btn" id="exportJson">Export JSON</button>
+      <button class="btn right" id="resetAll">Reset</button>
+      <div style="clear:both"></div>
+      <p class="note">Tip: Switch currency to see USD/LKR. Update <strong>USD→LKR</strong> rate as you wish.</p>
+    </div>
+
+    <p class="note">Recommended support mailbox: <strong>support@keyonshoes.lk</strong> (alternatives: <strong>care@keyonshoes.lk</strong>, <strong>orders@keyonshoes.lk</strong>).</p>
+  </div>
+
+  <script>
+    const sel=(q,root=document)=>root.querySelector(q);
+    const all=(q,root=document)=>Array.from(root.querySelectorAll(q));
+    const num=(v)=>{const n=parseFloat(v);return isNaN(n)?0:n;};
+    const fmt=(n)=>{const cur=sel('#currency').value;const s=new Intl.NumberFormat('en-LK',{style:'currency',currency:cur}).format(n);return s.replace(cur,'').trim();};
+
+    const makeRow=(id,desc,hint,qty=1,unit=0)=>{const r=document.createElement('div');r.className='row';r.dataset.id=id;r.innerHTML=`<input type="checkbox" class="toggle" checked /><div><div class="desc">${desc}</div><div class="muted">${hint||''}</div></div><div><input type="number" class="qty" min="0" step="1" value="${qty}" /></div><div><input type="number" class="unit" min="0" step="0.01" value="${unit}" /></div><div class="muted">Line Total</div><div class="line">0.00</div>`;return r;};
+    const makeVarRow=(id,desc,hint,type,defVal=0)=>{const r=document.createElement('div');r.className='row';r.dataset.id=id;const control=type==='pct'?`<input type="number" class="pct" step="0.01" min="0" value="${defVal}" />`:`<input type="number" class="fixed" step="0.01" min="0" value="${defVal}" />`;r.innerHTML=`<input type="checkbox" class="toggle" checked /><div><div class="desc">${desc}</div><div class="muted">${hint||''}</div></div><div class="muted">${type==='pct'?'Percent %':'Per Order'}</div><div>${control}</div><div class="muted">Monthly Est.</div><div class="line">0.00</div>`;return r;};
+
+    const oneTime=sel('#oneTimeSection');const monthly=sel('#monthlySection');const variable=sel('#variableSection');
+
+    oneTime.append(
+      makeRow('ot_domain','Domain Registration (1yr)','Purchased',1,26.67),
+      makeRow('ot_theme','Shopify theme – Testament Genesis','<a href="https://themes.shopify.com/themes/testament/presets/genesis">Theme link</a>',1,320),
+      makeRow('ot_pg_setup','Payment Gateway setup & consultant','IPG charges ≈ $100 + consultant $50 (total $150)',1,150),
+      makeRow('ot_social_setup','Social media profiles setup & initial top‑up','FB/TikTok/Instagram/X/YouTube (add Pinterest if needed)',1,10),
+      makeRow('ot_images_ai','Images (AI‑designed for website)','Lifestyle/renders',1,60)
+    );
+
+    monthly.append(
+      makeRow('m_shopify','Shopify subscription','Basic plan',1,29.99),
+      makeRow('m_email','Email service (Google Workspace)','1 mailbox (support@ / care@)',1,16),
+      makeRow('m_cloudflare','Domain DNS hosting (Cloudflare)','DNS, Anycast edge, DDoS, WAF, spam filtering',1,(59.98/12).toFixed(2)),
+      makeRow('m_ads','Paid boosting / Ads budget','Meta/Google/TikTok/YouTube/Pinterest',1,100)
+    );
+
+    variable.append(
+      makeVarRow('v_pg_pct','Payment gateway % fee','e.g. 2.5–3.5% of order value','pct',3.0),
+      makeVarRow('v_pg_fixed','Payment gateway fixed per order','e.g. $0.30 per txn','fixed',0.00),
+      makeVarRow('v_courier','Courier handling per order','System/portal integration & labels','fixed',1.50),
+      makeVarRow('v_returns','Returns allowance % of sales','Budget for exchanges/defects','pct',5.0)
+    );
+
+    function recalc(){
+      const fx=num(sel('#fx').value);const tax=num(sel('#taxRate').value)/100;const orders=num(sel('#orders').value);const aov=num(sel('#aov').value);
+      let ot=0;all('#oneTimeSection .row').forEach(r=>{if(!r.querySelector('.toggle').checked){r.querySelector('.line').textContent='0.00';return;}const qty=num(r.querySelector('.qty').value);const unit=num(r.querySelector('.unit').value);const line=qty*unit;ot+=line;r.querySelector('.line').textContent=fmt(line*(1+tax));});
+      let m=0;all('#monthlySection .row').forEach(r=>{if(!r.querySelector('.toggle').checked){r.querySelector('.line').textContent='0.00';return;}const qty=num(r.querySelector('.qty').value);const unit=num(r.querySelector('.unit').value);const line=qty*unit;m+=line;r.querySelector('.line').textContent=fmt(line*(1+tax));});
+      let mv=0;all('#variableSection .row').forEach(r=>{if(!r.querySelector('.toggle').checked){r.querySelector('.line').textContent='0.00';return;}const pct=r.querySelector('.pct');const fixed=r.querySelector('.fixed');let line=0;if(pct){line=(aov*orders)*(num(pct.value)/100);}else if(fixed){line=orders*num(fixed.value);}mv+=line;r.querySelector('.line').textContent=fmt(line*(1+tax));});
+      const otUsd=ot*(1+tax);const mUsd=m*(1+tax);const mvUsd=mv*(1+tax);const mAll=mUsd+mvUsd;const annual=otUsd+mAll*12;
+      function disp(numSel,lkrSel,amtUsd){const cur=sel('#currency').value;const inCur=(cur==='USD'?amtUsd:amtUsd*fx);const inLkr=amtUsd*fx;sel(numSel).textContent=fmt(inCur);sel(lkrSel).textContent=`(${new Intl.NumberFormat('en-LK',{style:'currency',currency:'LKR'}).format(inLkr)})`;}
+      disp('#otSubtotalDisp','#otLkr',otUsd);disp('#mSubtotalDisp','#mLkr',mUsd);disp('#mvSubtotalDisp','#mvLkr',mvUsd);disp('#mAllDisp','#mAllLkr',mAll);disp('#annualDisp','#annualLkr',annual);
+    }
+    document.body.addEventListener('input',e=>{if(e.target.matches('input, select'))recalc();});document.body.addEventListener('change',e=>{if(e.target.matches('input, select'))recalc();});
+    sel('#exportJson').addEventListener('click',()=>{const fx=num(sel('#fx').value);const tax=num(sel('#taxRate').value)/100;const orders=num(sel('#orders').value);const aov=num(sel('#aov').value);const rows=(scope)=>all(scope+' .row').map(r=>({on:r.querySelector('.toggle').checked,qty:num((r.querySelector('.qty')||{}).value||1),unit:num((r.querySelector('.unit')||{}).value||0),pct:num((r.querySelector('.pct')||{}).value||0),fixed:num((r.querySelector('.fixed')||{}).value||0),desc:r.querySelector('.desc')?.textContent||''}));const payload={meta:{company:'HS TRADING LANKA (PVT) LTD',domain:'keyonshoes.lk'},settings:{currency:sel('#currency').value,fx,taxRate:tax,aov,orders},oneTime:rows('#oneTimeSection'),monthly:rows('#monthlySection'),variable:rows('#variableSection')};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='keyonshoes_cost_model.json';a.click();URL.revokeObjectURL(url);});
+    sel('#resetAll').addEventListener('click',()=>{all('input[type=number]').forEach(i=>{if(i.id==='fx')i.value=300;else if(i.id==='aov')i.value=3000;else if(i.id==='orders')i.value=120;else i.value=(i.classList.contains('qty')?1:0);});all('input[type=checkbox]').forEach(c=>c.checked=true);sel('#taxRate').value=0;sel('#currency').value='LKR';recalc();});
+    recalc();
+  </script>
+</body>
+</html>
